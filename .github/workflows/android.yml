@@ -16,10 +16,19 @@ jobs:
           mkdir -p /tmp/nexus
           javac -d /tmp/nexus app/src/main/java/co/nexus/research/Agent.java tests/AgentTest.java
           java -cp /tmp/nexus AgentTest
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install Android 35 packages
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Verify preinstalled Android SDK and install required packages
+        shell: bash
+        run: |
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          MANAGER="$(command -v sdkmanager || true)"
+          if [[ -z "$MANAGER" ]]; then
+            MANAGER="$(find "$SDK/cmdline-tools" -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          fi
+          test -x "$MANAGER"
+          echo "$(dirname "$MANAGER")" >> "$GITHUB_PATH"
+          "$MANAGER" --sdk_root="$SDK" 'platforms;android-35' 'build-tools;35.0.0'
+          test -f "$SDK/platforms/android-35/android.jar"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
