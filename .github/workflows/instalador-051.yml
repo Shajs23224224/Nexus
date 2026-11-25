@@ -5,7 +5,7 @@ on:
     paths:
       - 'NEXUS-Codigo-0.5.zip'
       - 'patches/**'
-      - '.github/workflows/instalador-051.yml'
+      - 'NEXUS-Codigo-0.5(1).zip'
 permissions:
   contents: read
 jobs:
@@ -19,6 +19,9 @@ jobs:
           java-version: '17'
       - name: Verificar el archivo base
         run: |
+          if test ! -f NEXUS-Codigo-0.5.zip && test -f 'NEXUS-Codigo-0.5(1).zip'; then
+            cp -- 'NEXUS-Codigo-0.5(1).zip' NEXUS-Codigo-0.5.zip
+          fi
           if ! test -f NEXUS-Codigo-0.5.zip; then
             echo '::error::Falta NEXUS-Codigo-0.5.zip en la raíz de esta rama.'
             exit 1
