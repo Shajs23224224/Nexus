@@ -1,21 +1,38 @@
 name: Build NEXUS Research
 on: [push, workflow_dispatch]
+permissions:
+  contents: read
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+      - name: Test Java learning and persistence
+        run: |
+          mkdir -p /tmp/nexus
+          javac -d /tmp/nexus app/src/main/java/co/nexus/research/Agent.java tests/AgentTest.java
+          java -cp /tmp/nexus AgentTest
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android 35 packages
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - run: javac -d /tmp/nexus app/src/main/java/co/nexus/research/Agent.java tests/AgentTest.java && java -cp /tmp/nexus AgentTest
-      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
-      - run: gradle :app:assembleDebug
-      - uses: actions/upload-artifact@v4
+      - name: Print toolchain versions
+        run: |
+          java -version
+          gradle --version
+          sdkmanager --list_installed
+      - name: Compile debug APK
+        run: gradle :app:assembleDebug --no-daemon --stacktrace --console=plain
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: NEXUS-research-debug
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
