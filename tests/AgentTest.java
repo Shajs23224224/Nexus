@@ -1,0 +1,3 @@
+import co.nexus.research.Agent;
+import java.io.*;
+public class AgentTest {public static void main(String[] args)throws Exception{Agent a=new Agent();for(int i=0;i<1200;i++){Agent.Arena e=new Agent.Arena();while(!e.done){int s=e.state(),x=a.choose(s,true);double r=e.step(x);a.learn(s,x,r,e.state(),e.done);}a.episodes++;if(e.won)a.wins++;}Agent.Arena e=new Agent.Arena();while(!e.done)e.step(a.choose(e.state(),false));if(!e.won)throw new AssertionError("Policy failed");ByteArrayOutputStream b=new ByteArrayOutputStream();a.save(b);Agent copy=new Agent();copy.load(new ByteArrayInputStream(b.toByteArray()));if(copy.updates!=a.updates||!java.util.Arrays.deepEquals(a.q,copy.q))throw new AssertionError("Persistence failed");System.out.println("PASS");}}

@@ -1,0 +1,14 @@
+package co.nexus.research;
+import android.app.*;import android.os.*;import android.view.*;import android.widget.*;import android.graphics.*;import android.util.AtomicFile;import java.io.*;
+public final class MainActivity extends Activity {
+ final Agent agent=new Agent(); Agent.Arena arena=new Agent.Arena();final Handler h=new Handler(Looper.getMainLooper());boolean running,training;TextView status;Board board;AtomicFile file;
+ final Runnable loop=new Runnable(){public void run(){if(!running)return;PowerManager pm=getSystemService(PowerManager.class);if(Build.VERSION.SDK_INT>=29&&pm.getCurrentThermalStatus()>=PowerManager.THERMAL_STATUS_SEVERE){stop();return;}if(arena.done)arena=new Agent.Arena();int s=arena.state(),a=agent.choose(s,training);double r=arena.step(a);if(training){agent.learn(s,a,r,arena.state(),arena.done);if(arena.done){agent.episodes++;if(arena.won)agent.wins++;save();}}render();h.postDelayed(this,training?45:200);}};
+ @Override public void onCreate(Bundle b){super.onCreate(b);file=new AtomicFile(new File(getFilesDir(),"agent.bin"));try{agent.load(file.openRead());}catch(IOException ignored){}LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(16,32,16,16);status=new TextView(this);status.setTextSize(18);root.addView(status);board=new Board();root.addView(board,new LinearLayout.LayoutParams(-1,0,1));button(root,"Entrenar autónomamente",()->start(true));button(root,"Evaluar sin modificar pesos",()->start(false));button(root,"Detener y guardar",()->stop());setContentView(root);render();}
+ void button(LinearLayout r,String name,Runnable action){Button b=new Button(this);b.setText(name);b.setOnClickListener(v->action.run());r.addView(b);}
+ void start(boolean t){stop();training=t;arena=new Agent.Arena();running=true;h.post(loop);}
+ void stop(){running=false;h.removeCallbacks(loop);save();render();}
+ void save(){if(file==null)return;FileOutputStream out=null;try{out=file.startWrite();ByteArrayOutputStream bytes=new ByteArrayOutputStream();agent.save(bytes);out.write(bytes.toByteArray());file.finishWrite(out);}catch(IOException e){if(out!=null)file.failWrite(out);}}
+ void render(){if(status==null)return;status.setText("NEXUS Research 0.6 | "+(running?(training?"Aprendiendo":"Evaluando"):"Detenido")+"\nEpisodios: "+agent.episodes+" | Éxitos: "+agent.wins+" | Actualizaciones: "+agent.updates+"\nPaso: "+arena.steps+" | Recurso: "+arena.has+" | Victoria: "+arena.won);board.invalidate();}
+ @Override protected void onPause(){stop();super.onPause();}
+ final class Board extends View{final Paint p=new Paint();Board(){super(MainActivity.this);}protected void onDraw(Canvas c){float d=Math.min(getWidth(),getHeight())/8f;for(int i=0;i<64;i++){p.setColor(i==arena.pos?0xff22ddcc:i==7&&!arena.has?0xffffc055:i==63?0xff55cc77:i==18||i==26||i==34||i==42?0xff555555:0xff223344);c.drawRect(i%8*d+1,i/8*d+1,(i%8+1)*d-1,(i/8+1)*d-1,p);}}}
+}
