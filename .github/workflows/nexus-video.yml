@@ -29,7 +29,7 @@ jobs:
           </manifest>
           XML
           "$bt/aapt2" link -I "$jar" --manifest out/AndroidManifest.xml -o out/base.apk
-          javac -source 8 -target 8 -bootclasspath "$jar" -d out/classes video/*.java
+          javac -source 8 -target 8 -bootclasspath "$bt/core-lambda-stubs.jar:$jar" -d out/classes video/*.java
           "$bt/d8" --min-api 28 --lib "$jar" --output out/dex $(find out/classes -name '*.class')
           (cd out/dex && zip ../base.apk classes.dex)
           "$bt/zipalign" -f 4 out/base.apk out/aligned.apk
