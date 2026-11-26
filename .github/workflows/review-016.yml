@@ -1,0 +1,55 @@
+name: NEXUS 0.16 Review Lab
+on:
+  push:
+    branches: [nexus-0.16-review]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Test cognitive learning and persistence
+        run: |
+          mkdir -p /tmp/nx14
+          javac -d /tmp/nx14 app/src/main/java/co/nexus/research/CognitiveCore.java app/src/main/java/co/nexus/research/CognitiveArena.java tests/CognitiveTest.java
+          java -cp /tmp/nx14 CognitiveTest
+          javac -cp /tmp/nx14 -d /tmp/nx14 app/src/main/java/co/nexus/research/SparseBrain.java tests/SparseTest.java
+          java -cp /tmp/nx14 SparseTest
+          javac -cp /tmp/nx14 -d /tmp/nx14 app/src/main/java/co/nexus/research/StrategyLab.java tests/ReviewTest.java
+          java -cp /tmp/nx14 ReviewTest
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Install SDK
+        run: |
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          MANAGER="$(command -v sdkmanager || true)"
+          if [[ -z "$MANAGER" ]]; then
+            MANAGER="$(find "$SDK/cmdline-tools" -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          fi
+          "$MANAGER" --sdk_root="$SDK" 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Build
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+      - name: Verify and package
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk NEXUS-0.16-Review-Lab.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify NEXUS-0.16-Review-Lab.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging NEXUS-0.16-Review-Lab.apk | grep "versionName='0.16.0'"
+          zip NEXUS-0.16-Review-Lab.zip NEXUS-0.16-Review-Lab.apk
+          unzip -t NEXUS-0.16-Review-Lab.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NEXUS-0.16-Review-Lab
+          path: NEXUS-0.16-Review-Lab.apk
+          if-no-files-found: error
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "review-016-$GITHUB_RUN_ID" NEXUS-0.16-Review-Lab.zip --target "$GITHUB_SHA" --prerelease --title "NEXUS 0.16 Review Lab" --notes "Independent local simulator research edition; not a Free Fire agent."
