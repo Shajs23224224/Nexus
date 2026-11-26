@@ -5,6 +5,7 @@ on:
     paths: [video/**, .github/workflows/nexus-video.yml]
 permissions:
   contents: write
+  statuses: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -44,3 +45,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release create "video-${GITHUB_RUN_ID}" Nexus-Video.zip --target "$GITHUB_SHA" --prerelease --title "NEXUS Video · análisis local" --notes "Complemento de prueba para Android 9 o posterior."
+      - name: Enlazar resultado al commit
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RESULT: ${{ job.status }}
+        run: |
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          if [ "$RESULT" = success ]; then url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/video-$GITHUB_RUN_ID/Nexus-Video.zip"; fi
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" -f state="$RESULT" -f context="NEXUS Video APK" -f target_url="$url" >/dev/null
