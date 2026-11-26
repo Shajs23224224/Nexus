@@ -19,6 +19,9 @@ public final class PixelVision {
   for(int k=0;k<BARS;k++){int count=0;for(int i=0;i<32;i++)if(filled(rgba,index(w,h,LEFT+(RIGHT-LEFT)*(i+.5f)/32,barY(k)+.007f)))count++;bars[k]=count/32f;}
   return new Frame(l,bars,colors);
  }
+ public static int group(Frame f){float m=0;for(float v:f.luminance)m+=v/128;return Math.min(5,(int)(m*6));}
+ /** Feedback from visible HUD changes and frame motion, not private coordinates or hit flags. */
+ public static float[] outcome(Frame before,Frame after,CognitiveCore.Action action){float hp=after.bars[0],ammo=after.bars[1],kits=after.bars[2],progress=after.bars[3],reserve=after.bars[4];float change=0;for(int i=0;i<128;i++)change+=Math.abs(after.luminance[i]-before.luminance[i])/128;float gain=progress-before.bars[3],damage=Math.max(0,before.bars[0]-hp);float utility=clip(.24f+2*gain+Math.max(0,hp-before.bars[0])+.25f*Math.max(0,reserve-before.bars[4])-.8f*damage);if(action==CognitiveCore.Action.TAG&&gain==0)utility=clip(utility-.08f);if(progress>=.99f)utility=1;if(hp<=0)utility=0;return new float[]{utility,hp,clip(Math.max(0,before.bars[1]-ammo)+damage),clip(change*3),progress,ammo,kits,action==CognitiveCore.Action.DRIVE?1:0,0,0,clip(gain*3),clip(1-damage*5),progress>=.99f?1:0,hp>0?1:0,0,clip(change*3)};}
  /** All action candidates are available: feasibility is not read from simulator internals. */
  public static CognitiveCore.Observation observe(Frame f,Frame prev,float[] predicted){float[] s=new float[128];s[0]=f.bars[0];s[1]=f.bars[1];s[2]=f.bars[2];s[8]=f.bars[3];s[11]=f.bars[4];float diff=0;for(int i=0;i<128;i++){if(prev!=null)diff+=Math.abs(f.luminance[i]-prev.luminance[i])/128;if(i%2==0)s[16+i/2]=clip((f.luminance[i]+f.luminance[i+1])*.5f);}s[3]=clip(diff*3);s[9]=0;s[13]=.5f;s[14]=.5f;
   if(predicted!=null){if(predicted.length!=16)throw new IllegalArgumentException("prediction size");for(int i=0;i<16;i++)s[80+i]=clip(predicted[i]);}
