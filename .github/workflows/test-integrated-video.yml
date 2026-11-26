@@ -1,0 +1,30 @@
+name: Comprobar video dentro de NEXUS AI
+on:
+  push:
+    branches: [fix/panel-ensenanza-05]
+    paths: [integration/**, video/**, .github/workflows/test-integrated-video.yml]
+permissions:
+  contents: read
+  statuses: write
+jobs:
+  integrar:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compilar el proyecto con video integrado
+        run: |
+          src=$(find . -maxdepth 1 -name 'NEXUS-Codigo-0.5*.zip' | head -1)
+          python3 patches/prepare_051.py "$src" "$RUNNER_TEMP/NexusAI"
+          python3 integration/include_video.py "$RUNNER_TEMP/NexusAI"
+          cd "$RUNNER_TEMP/NexusAI"
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon
+      - if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RESULT: ${{ job.status }}
+        run: gh api "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" -f state="$RESULT" -f context="Video integrado" -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >/dev/null
