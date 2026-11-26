@@ -4,7 +4,7 @@ on:
     branches: [fix/panel-ensenanza-05]
     paths: [integration/**, video/**, .github/workflows/test-integrated-video.yml]
 permissions:
-  contents: read
+  contents: write
   statuses: write
 jobs:
   integrar:
@@ -21,8 +21,26 @@ jobs:
           python3 patches/prepare_051.py "$src" "$RUNNER_TEMP/NexusAI"
           python3 integration/include_video.py "$RUNNER_TEMP/NexusAI"
           cd "$RUNNER_TEMP/NexusAI"
+          sed -i "s/applicationId 'co.nexus.lab.design'/applicationId 'co.nexus.lab.videopreview'/" app/build.gradle
+          grep -q "applicationId 'co.nexus.lab.videopreview'" app/build.gradle
+          sed -i 's/android:label="NEXUS AI"/android:label="NEXUS AI + Video"/' app/src/main/AndroidManifest.xml
           chmod +x gradlew
           ./gradlew :app:assembleDebug --no-daemon
+      - name: Publicar instalador integrado de prueba
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          apk="$RUNNER_TEMP/NexusAI/app/build/outputs/apk/debug/app-debug.apk"
+          bt=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          "$bt/apksigner" verify "$apk"
+          "$bt/aapt" dump badging "$apk" | grep -F "package: name='co.nexus.lab.videopreview'"
+          "$bt/aapt" dump xmltree "$apk" AndroidManifest.xml > "$RUNNER_TEMP/manifest.txt"
+          grep -F 'co.nexus.video.Analysis' "$RUNNER_TEMP/manifest.txt"
+          grep -F 'co.nexus.video.Review' "$RUNNER_TEMP/manifest.txt"
+          cp "$apk" Nexus-AI-Video.apk
+          zip Nexus-AI-Video.zip Nexus-AI-Video.apk
+          unzip -t Nexus-AI-Video.zip
+          gh release create "integrado-$GITHUB_RUN_ID" Nexus-AI-Video.zip --target "$GITHUB_SHA" --prerelease --title "NEXUS AI + Video · prueba integrada" --notes "Una aplicación basada en NEXUS 0.5.1 con análisis de video en segundo plano. Instalación independiente de la versión 0.11."
       - if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
