@@ -1,0 +1,65 @@
+name: NEXUS Original 0.19 Visual Learning
+on:
+  push:
+    branches: [nexus-original-019-vision]
+    paths: ['original/**', '.github/workflows/original-019.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Recover and extend original NEXUS project
+        run: |
+          set -eu
+          unzip -q Nexus012-Codigo.zip -d "$RUNNER_TEMP/source"
+          project="$RUNNER_TEMP/source/NexusAI"
+          python3 supply/integrate.py "$project"
+          python3 original/integrate_cognitive.py "$project"
+          javac -d "$RUNNER_TEMP" supply/*.java
+          java -cp "$RUNNER_TEMP" co.nexus.lab.live.SupplyCheck
+          rev=9af471a8743e6568c5552f925f87001b12248de4
+          mkdir -p "$RUNNER_TEMP/nx-tests"
+          for test in CognitiveTest SparseTest ReviewTest; do
+            git show "$rev:tests/$test.java" > "$RUNNER_TEMP/nx-tests/$test.java"
+          done
+          src="$project/app/src/main/java/co/nexus/research"
+          javac -d "$RUNNER_TEMP/nx-tests" "$src/CognitiveCore.java" "$src/CognitiveArena.java" "$src/SparseBrain.java" "$src/StrategyLab.java" "$RUNNER_TEMP/nx-tests/"*Test.java
+          for test in CognitiveTest SparseTest ReviewTest; do
+            java -cp "$RUNNER_TEMP/nx-tests" "$test"
+          done
+          javac -cp "$RUNNER_TEMP/nx-tests" -d "$RUNNER_TEMP/nx-tests" "$src/ShooterWorld.java" "$src/PixelVision.java" original/shooter/ShooterTest.java original/shooter/PixelTest.java
+          java -cp "$RUNNER_TEMP/nx-tests" co.nexus.research.ShooterTest
+          java -cp "$RUNNER_TEMP/nx-tests" co.nexus.research.PixelTest
+          cd "$project"
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Verify original package and prepare ZIP
+        run: |
+          set -eu
+          apk="$RUNNER_TEMP/source/NexusAI/app/build/outputs/apk/debug/app-debug.apk"
+          bt=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          "$bt/apksigner" verify "$apk"
+          "$bt/aapt" dump badging "$apk" > badging.txt
+          grep -F "package: name='co.nexus.lab.design' versionCode='22' versionName='0.19.0'" badging.txt
+          grep -F "launchable-activity: name='co.nexus.lab.FieldActivity'" badging.txt
+          cp "$apk" NEXUS-Original-0.19.apk
+          zip NEXUS-Original-0.19.zip NEXUS-Original-0.19.apk
+          unzip -t NEXUS-Original-0.19.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NEXUS-Original-0.19
+          path: NEXUS-Original-0.19.zip
+          if-no-files-found: error
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "original-019-$GITHUB_RUN_ID" NEXUS-Original-0.19.zip --target "$GITHUB_SHA" --prerelease --title "NEXUS Original 0.19 Cognitive Integration" --notes "Original NEXUS with pixel-only local simulator observation, online learning, and sensor comparison mode. Live control policy unchanged."
