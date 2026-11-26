@@ -1,0 +1,8 @@
+# NEXUS 0.15 Sparse Lab
+Local simulator research edition, based on the 0.14 Android application. The 0.14 laboratory remains accessible from the new launcher, using its original checkpoint. The separate 0.13 application is unchanged and is not included.
+- 412 independently weighted, lazily instantiated sparse MLPs, eight hidden layers of 1024 units each, 16 output estimates. Four incoming trainable connections per hidden unit and 64 per output; residual links in hidden layers. 17,304,000 trainable coefficients including biases (69,216,000 bytes if all Float32 weights allocated).
+- 80 deterministic action/context routing roles, not 80 separate autonomous agents; 400 decision networks, 12 video networks. Two networks evaluated per permitted action. Fixed topology and routing, not dense models or learned gating.
+- Online regression from local simulator outcomes, exploratory action selection, limited experience replay, evaluation without weight changes, atomic checkpoint, thermal pause.
+- Imported video uses consecutive 16x8 grayscale features to train prediction of 16 regional averages, with interleaved evaluation pairs. This is self-supervised visual prediction, not OCR, object detection, gameplay imitation or transfer to decision experts. Video pauses when the activity is left. No external game control.
+- No INT8, disk-backed eviction cache, dense 3B-parameter mode, professional benchmark or device performance certification yet. The 0.15 checkpoint is independent of the 0.14 checkpoint. Debug APK signing keys may vary across builds; Android requires matching signatures for in-place upgrades.
+Build: Java 17, SDK 35, Gradle 8.9. CI checks both laboratories, sparse learning, persistence, video prediction and APK signing.
