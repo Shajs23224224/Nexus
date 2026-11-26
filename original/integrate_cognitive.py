@@ -19,7 +19,7 @@ dest.mkdir(parents=True,exist_ok=True)
 for name in files:
     path=f'app/src/main/java/co/nexus/research/{name}.java'
     (dest/f'{name}.java').write_bytes(subprocess.check_output(['git','show',f'{rev}:{path}'],cwd=repo))
-for name in ['ShooterWorld','ShooterScene','ShooterActivity']:
+for name in ['ShooterWorld','ShooterScene','ShooterActivity','PixelVision']:
     shutil.copyfile(repo/'original/shooter'/f'{name}.java',dest/f'{name}.java')
 # Retain the original launcher and insert one native menu entry in its existing style.
 s=source.read_text(encoding='utf-8')
@@ -34,8 +34,8 @@ ET.register_namespace('android',ns)
 def at(name): return '{'+ns+'}'+name
 tree=ET.parse(manifest)
 root=tree.getroot()
-root.set(at('versionCode'),'21')
-root.set(at('versionName'),'0.18.0')
+root.set(at('versionCode'),'22')
+root.set(at('versionName'),'0.19.0')
 application=root.find('application')
 assert application is not None
 for name in ['co.nexus.research.CognitiveActivity','co.nexus.research.SparseActivity']:
@@ -49,7 +49,7 @@ tree.write(manifest,encoding='utf-8',xml_declaration=True)
 gradle=app/'build.gradle'
 g=gradle.read_text()
 assert "applicationId 'co.nexus.lab.design'" in g
-g=g.replace('versionCode 15','versionCode 21').replace("versionName '0.12.0'","versionName '0.18.0'")
+g=g.replace('versionCode 15','versionCode 22').replace("versionName '0.12.0'","versionName '0.19.0'")
 g+='\ndependencies { implementation "com.google.mlkit:text-recognition:16.0.1"; implementation "com.google.mlkit:image-labeling:17.0.9" }\n'
 gradle.write_text(g)
 props=project/'gradle.properties'
